@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat with Grok</title>
+    <style>
+        body {
+            background-color: rgb(20, 19, 22);
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        #chat-container {
+            background-color: rgb(25, 24, 28);
+            width: 90%;
+            height: 90%;
+            border-radius: 32px;
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+        }
+
+        #chat-box {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 10px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        #chat-box::-webkit-scrollbar {
+            width: 16px;
+        }
+
+        #chat-box::-webkit-scrollbar-track {
+            background: #141316;
+        }
+
+        #chat-box::-webkit-scrollbar-thumb {
+            background-color: black;
+            border-radius: 5px;
+            border: 2px solid #141316;
+        }
+
+        #chat-box {
+            scrollbar-width: thin;
+            scrollbar-color: #424242 #141316;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 24px;
+            word-wrap: break-word;
+        }
+
+        .user-message {
+            margin-left: auto;
+            background-color: rgb(40, 40, 40);
+            color: white;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        .grok-message {
+            align-self: flex-start;
+            color: white;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        #input-container {
+            display: flex;
+            padding: 10px;
+        }
+
+        #prompt-textarea {
+            flex-grow: 1;
+            margin-right: 16px;
+            margin-left: 16px;
+            border-radius: 36px;
+            font-family: inherit;
+            padding-left: 12px;
+            padding-right: 12px;
+            padding-top: 8px;
+            padding-bottom: 0px;
+            background-color: rgb(40, 39, 43);
+            color: white;
+            border: 1px solid #4A4A4A;
+            height: 36px;
+            /* 初始高度设置为0 */
+            min-height: 26px;
+            /* 最小高度 */
+            max-height: 200px;
+            /* 最大高度 */
+            overflow-y: auto;
+            /* 内容超出时显示滚动条 */
+            outline: none;
+            line-height: 1.5;
+            scrollbar-width: thin;
+            scrollbar-color: #424242 #141316;
+            font-size: 16px;
+        }
+
+        #prompt-textarea::-webkit-scrollbar {
+            width: 16px;
+        }
+
+        #prompt-textarea::-webkit-scrollbar-track {
+            background: #141316;
+        }
+
+        #prompt-textarea::-webkit-scrollbar-thumb {
+            background-color: #424242;
+            border-radius: 5px;
+            border: 2px solid #141316;
+        }
+
+        button {
+            background-color: #e0e0e1;
+            color: #4A4A4A;
+            border: none;
+            padding: 0;
+            /* 移除内边距 */
+            width: 46px;
+            height: 46px;
+            cursor: pointer;
+            border-radius: 24px;
+            font-family: inherit;
+            display: flex;
+            /* 使用flex布局 */
+            align-items: center;
+            /* 垂直居中 */
+            justify-content: center;
+            /* 水平居中 */
+        }
+
+        pre {
+            position: relative;
+            /* To allow absolute positioning of the button */
+            background-color: black;
+            color: #f8f8f2;
+            padding: 10px;
+            border-radius: 12px;
+            overflow-x: auto;
+            font-family: 'Courier New', Courier, monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .copy-code-btn {
+            position: absolute;
+            bottom: 5px;
+            right: 10px;
+            background-color: #4A4A4A;
+            color: white;
+            border: none;
+            margin-bottom: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            height: 16px;
+            width: 48px;
+        }
+
+        .copy-code-btn:hover {
+            background-color: #616161;
+        }
+
+        code {
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        #stop-icon {
+            border-radius: 6px;
+            background-color: #3e3e3e;
+            padding: 10px 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="chat-container">
+        <div id="chat-box"></div>
+        <div id="temperature-control" style="display: flex; align-items: center; margin: 10px 0;">
+            <label for="temperature-slider" style="margin-right: 10px; color: white;">更严谨</label>
+            <input type="range" id="temperature-slider" min="0" max="1" step="0.001" value="0.8" style="flex-grow: 1; margin-right: 8px">
+            更有创造力
+            <!-- <span id="temperature-value" style="margin-left: 10px; color: white;">0.8</span> -->
+        </div>
+
+        <div id="input-container">
+
+            <button class="button" onclick="startNewChat()">
+                <svg width="24" height="24" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 2V30M2 16H30" />
+                </svg>
+            </button>
+
+            <div contenteditable="true" id="prompt-textarea" placeholder="Type your message..."></div>
+            <button onclick="sendMessage()">
+                <svg width="48" height="48" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+                    <path d="M15.1918 8.90615C15.6381 8.45983 16.3618 8.45983 16.8081 8.90615L21.9509 14.049C22.3972 14.4953 22.3972 15.2189 21.9509 15.6652C21.5046 16.1116 20.781 16.1116 20.3347 15.6652L17.1428 12.4734V22.2857C17.1428 22.9169 16.6311 23.4286 15.9999 23.4286C15.3688 23.4286 14.8571 22.9169 14.8571 22.2857V12.4734L11.6652 15.6652C11.2189 16.1116 10.4953 16.1116 10.049 15.6652C9.60265 15.2189 9.60265 14.4953 10.049 14.049L15.1918 8.90615Z" />
+                </svg>
+            </button>
+            <button id="stop-button" style="display: none" onclick="stopChat()">
+                <div id="stop-icon">
+                </div>
+            </button>
+
+
+        </div>
+    </div>
+
+    <script>
+        // 定义SVG路径
+        const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+                            <path d="m3.005 8.858 8.783 12.544h3.904L6.908 8.858zM6.905 15.825 3 21.402h3.907l1.951-2.788zM16.585 2l-6.75 9.64 1.953 2.79L20.492 2zM17.292 7.965v13.437h3.2V3.395z" fill="#808080"></path>
+                        </svg>`;
+
+        // 将SVG转为Data URI
+        const svgDataUri = "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svgIcon);
+
+        // 动态创建并插入<link>标签来设置favicon
+        const link = document.createElement('link');
+        link.rel = 'icon';
+        link.href = svgDataUri;
+        document.head.appendChild(link);
+
+        let url = 'http://zzw511.bdp.cc:3841/api';
+        fetch("http://192.168.2.111:3841/", {
+                method: 'HEAD',
+                mode: 'no-cors'
+            })
+            .then(response => {
+                    url = 'http://192.168.2.111:3841/api';
+            })
+            .catch(error => {
+                url = 'http://zzw511.bdp.cc:3841/api';
+                document.getElementById('currentUrl').textContent = url;
+            });
+
+        let controller;
+        let sysprmpt = "你好，你是Grok，你可以看图，请用中文回答。";
+        let conversationHistory = [{
+            role: "system",
+            content: sysprmpt
+        }];
+        // 获取滑块和显示值的元素
+        const temperatureSlider = document.getElementById('temperature-slider');
+        const temperatureValue = document.getElementById('temperature-value');
+
+        // 初始化滑块值
+        let temperature = parseFloat(temperatureSlider.value);
+
+        // 更新滑块值显示，并绑定到变量
+        temperatureSlider.addEventListener('input', () => {
+            temperature = Math.sqrt(parseFloat(temperatureSlider.value)); // 使用算术平方根
+            temperatureValue.textContent = temperature.toFixed(2);
+        });
+
+        document.getElementById('prompt-textarea').addEventListener('input', function(e) {
+            autoAdjustHeight(this);
+        });
+
+
+        document.getElementById('prompt-textarea').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        function encodeImage(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function sendMessage() {
+            const userInput = document.getElementById('prompt-textarea');
+            const chatBox = document.getElementById('chat-box');
+            const stopButton = document.getElementById('stop-button');
+            const sendButton = document.querySelector('button[onclick="sendMessage()"]');
+            sendButton.style.display = 'none';
+            stopButton.style.display = 'flex';
+
+            if (!userInput.textContent.trim()) return;
+
+            const userMessageDiv = document.createElement('div');
+            userMessageDiv.classList.add('message', 'user-message');
+            userMessageDiv.innerHTML = `${userInput.innerHTML}`;
+            chatBox.appendChild(userMessageDiv);
+            var regex = /(程序|代码|C\+\+)/i;
+            if (regex.test(userMessageDiv.innerHTML)) {
+                conversationHistory.push({
+                    role: "system",
+                    content: "检测到用户可能需要你写C++代码，如果是这样，请使用<bits/stdc++.h>与using namespace std;，并且不要添加注释等。"
+                });
+            }
+            let hasImage = false;
+            let base64Image = '';
+
+            // Check for images in the chat box
+            const images = userInput.querySelectorAll('img');
+            let userMessageContent = "";
+            if (images.length > 0) {
+                userMessageContent = "[user has uploaded a(n) (few) image(s)]";
+                hasImage = true;
+                const img = images[0];
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0, img.width, img.height);
+
+                // Convert canvas to base64
+                base64Image = canvas.toDataURL('image/jpeg', 0.5).split(',')[1]; // Assuming JPG with 70% quality
+            }
+
+            // Only add text to conversation history
+            userMessageContent += userInput.innerText.trim();
+
+            conversationHistory.push({
+                role: "user",
+                content: userMessageContent
+            });
+
+            userInput.innerHTML = '';
+            autoAdjustHeight(userInput);
+
+            const grokMessageDiv = document.createElement('div');
+            grokMessageDiv.classList.add('message', 'grok-message');
+            grokMessageDiv.innerHTML = `<strong>Grok:</strong> <span id="grok-message-content-${conversationHistory.length - 1}" style="list-style-type: decimal"></span>`;
+            chatBox.appendChild(grokMessageDiv);
+
+            controller = new AbortController();
+
+            let modelName = hasImage ? "grok-2-vision-1212" : "grok-beta";
+            fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        messages: [
+                            ...conversationHistory.map(item => ({
+                                role: item.role,
+                                content: item.content
+                            })),
+                            hasImage ? {
+                                "role": "user",
+                                "content": [{
+                                        "type": "image_url",
+                                        "image_url": {
+                                            "url": `data:image/jpeg;base64,${base64Image}`,
+                                            "detail": "high"
+                                        }
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": userInput.innerText.trim()
+                                    }
+                                ]
+                            } : null
+                        ].filter(item => item !== null),
+                        model: modelName,
+                        stream: true,
+                        temperature: temperature
+                    }),
+                    signal: controller.signal
+                })
+                .then(response => {
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder('utf-8');
+                    let buffer = '';
+                    let currentMessage = "";
+
+                    function updateGrokMessage(newContent) {
+                        const messageContentId = `grok-message-content-${conversationHistory.length - 1}`;
+                        const messageContent = document.getElementById(messageContentId);
+
+                        let insideCodeBlock = false;
+                        let formattedContent = '';
+                        let currentCodeBlock = '';
+
+                        let lines = newContent.split('\n');
+                        lines.forEach(line => {
+                            if (line.trim().startsWith('```')) {
+                                if (insideCodeBlock) {
+                                    // End of code block
+                                    formattedContent += `<pre><code>${escapeHTML(currentCodeBlock)}</code></pre><button class="copy-code-btn" onclick="copyCode('${escapeHTML(currentCodeBlock).replace(/'/g, "\\'").replace(/\n/g, " ")}')">Copy</button>`;
+                                    currentCodeBlock = '';
+                                } else {
+                                    // Start of code block
+                                    currentCodeBlock = '';
+                                }
+                                insideCodeBlock = !insideCodeBlock;
+                            } else {
+                                if (insideCodeBlock) {
+                                    // Collecting lines within code block
+                                    currentCodeBlock += line + '\n';
+                                } else {
+                                    // Apply Markdown transformations to lines outside of code block
+                                    formattedContent += formatMarkdown(line);
+                                }
+                            }
+                        });
+
+                        if (insideCodeBlock) {
+                            formattedContent += `<pre><code>${escapeHTML(currentCodeBlock)}</code></pre><button class="copy-code-btn" onclick="copyCode('${escapeHTML(currentCodeBlock).replace(/'/g, "\\'").replace(/\n/g, " ")}')">Copy</button>`;
+                        }
+
+                        messageContent.innerHTML = formattedContent;
+                        chatBox.scrollTop = chatBox.scrollHeight;
+
+                        // 绑定所有的复制按钮
+                        const copyButtons = messageContent.querySelectorAll('.copy-code-btn');
+                        copyButtons.forEach(button => {
+                            const preTag = button.previousElementSibling;
+                            const preContainer = document.createElement('div');
+                            preContainer.style.position = 'relative';
+
+                            preTag.parentNode.insertBefore(preContainer, preTag);
+                            preContainer.appendChild(preTag);
+                            preContainer.appendChild(button);
+
+                            button.style.position = 'absolute';
+                            button.style.right = '10px'; // 根据需要调整右边距
+                            button.style.bottom = '-10px'; // 根据需要调整下边距
+                            button.style.display = 'block';
+
+                            button.addEventListener('click', function() {
+                                const codeContent = this.previousElementSibling.querySelector('code').innerText; // 获取 <code> 内的文本
+                                copyCode(codeContent);
+                            });
+                        });
+                    }
+
+
+                    function escapeSpecialMarkdown(text) {
+                        // Escape `.a.exe.`
+                        text = text.replace(/\.a\.exe\./g, '<code>.a.exe.</code>');
+
+                        // Escape multi-line `.a.exe`
+                        text = text.replace(/\n\.a\.exe\n/g, '\n<code>.a.exe</code>\n');
+
+                        return text;
+                    }
+                    let orderedListCounter = 1; // 外部定义计数器，以便跨函数调用保持状态
+                    let orderedListOpen = false; // 用于标记有序列表是否已经打开
+
+                    function formatMarkdown(text) {
+                        // 修复有序和无序列表
+                        text = fixLists(text);
+                        text = escapeSpecialMarkdown(text); // 假设这个函数在处理特殊字符
+
+                        // 加粗 (e.g. **bold** 或 __bold__)
+                        text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                        text = text.replace(/__(.*?)__/g, '<strong>$1</strong>');
+
+                        // 斜体 (e.g. *italic* 或 _italic_)
+                        text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+                        text = text.replace(/_(.*?)_/g, '<em>$1</em>');
+
+                        // 删除线 (e.g. ~~strikethrough~~)
+                        text = text.replace(/~~(.*?)~~/g, '<del>$1</del>');
+
+                        // 标题 (e.g. # Header1, ## Header2, etc.)
+                        text = text.replace(/^# (.*?)$/gm, '<h1>$1</h1>');
+                        text = text.replace(/^## (.*?)$/gm, '<h2>$1</h2>');
+                        text = text.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
+                        text = text.replace(/^#### (.*?)$/gm, '<h4>$1</h4>');
+                        text = text.replace(/^##### (.*?)$/gm, '<h5>$1</h5>');
+                        text = text.replace(/^###### (.*?)$/gm, '<h6>$1</h6>');
+
+                        // 链接 (e.g. [Google](http://google.com))
+                        text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color: #0077cc;">$1</a>');
+
+                        // 图片 (e.g. ![alt text](image.jpg))
+                        text = text.replace(/\!\[([^\]]+)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" />');
+
+                        // 引用块 (e.g. > This is a blockquote)
+                        text = text.replace(/^>\s(.*?)$/gm, '<blockquote style="background-color: #f0f0f0; border-left: 5px solid #ccc; padding: 10px;">$1</blockquote>');
+
+                        // 代码块 (e.g. ```code block```)
+                        text = text.replace(/```(.*?)```/gs, '<pre><code>$1</code></pre>');
+
+                        // 水平线 (e.g. --- 或 ***)
+                        text = text.replace(/^[-*]{3,}$/gm, '<hr />');
+
+                        // 内联代码块 (e.g. `code block`)
+                        text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+                        return text;
+                    }
+
+                    function fixLists(text) {
+                        let lines = text.split('\n');
+                        let result = [];
+                        let unorderedListLevel = 0;
+                        let orderedListOpen = false;
+
+                        for (let line of lines) {
+                            // Check for ordered list (numbered)
+                            if (line.match(/^\d+\.\s/)) {
+                                // If it's the first ordered list item, start <ol> tag
+                                if (!orderedListOpen) {
+                                    orderedListOpen = true;
+                                    //result.push('<ol style="list-style-type: decimal; font-size: 18px;">');
+                                }
+                                result.push(`<li>${line.replace(/^\d+\.\s/, '')}</li>`); // List item
+                            } else {
+                                // Close ordered list if needed
+                                if (orderedListOpen) {
+                                    orderedListOpen = false;
+                                    result.push('</ol>');
+                                }
+
+                                // Check for unordered list (bulleted)
+                                if (line.match(/^\* /) || line.match(/^-\s/)) {
+                                    // Determine the level of nested unordered list
+                                    let currentLevel = line.match(/^\* /) ? line.match(/^\*+/)[0].length : line.match(/^-\s/)[0].length;
+
+                                    // If the level changes, start or end <ul> tag
+                                    if (currentLevel > unorderedListLevel) {
+                                        unorderedListLevel = currentLevel;
+                                        result.push('<ul>');
+                                    } else if (currentLevel < unorderedListLevel) {
+                                        unorderedListLevel = currentLevel;
+                                        result.push('</ul>');
+                                    }
+                                    result.push(`<li>${line.replace(/^\* |^- /, '')}</li>`);
+                                } else {
+                                    // Close unordered list if needed
+                                    if (unorderedListLevel > 0) {
+                                        unorderedListLevel = 0;
+                                        result.push('</ul>');
+                                    }
+                                    result.push(line); // Non-list content
+                                }
+                            }
+                        }
+
+                        // Close any unclosed lists
+                        if (orderedListOpen) result.push('</ol>');
+                        if (unorderedListLevel > 0) result.push('</ul>');
+
+                        return result.join('\n');
+                    }
+
+
+                    function escapeHTML(str) {
+                        return str.replace(/[&<>"']/g, (tag) => {
+                            const chars = {
+                                '&': '&amp;',
+                                '<': '&lt;',
+                                '>': '&gt;',
+                                '"': '&quot;',
+                                "'": '&#39;',
+                            };
+                            return chars[tag] || tag;
+                        });
+                    }
+
+
+
+                    function processText(text) {
+                        buffer += text;
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop();
+
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                const data = line.slice(6);
+
+                                if (data === '[DONE]') {
+                                    stopButton.style.display = 'none';
+                                    sendButton.style.display = 'flex';
+                                    conversationHistory.push({
+                                        role: "assistant",
+                                        content: currentMessage
+                                    });
+                                } else {
+                                    try {
+                                        const jsonData = JSON.parse(data);
+                                        if (jsonData.choices && jsonData.choices[0]?.delta?.content) {
+                                            const newContent = jsonData.choices[0].delta.content;
+                                            currentMessage += newContent;
+                                            updateGrokMessage(currentMessage);
+                                        }
+                                    } catch (e) {
+                                        console.error('Error parsing JSON:', e);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    return reader.read().then(function processResult({
+                        done,
+                        value
+                    }) {
+                        if (done) return;
+                        processText(decoder.decode(value));
+                        return reader.read().then(processResult);
+                    });
+                })
+                .catch(e => {
+                    if (e.name !== 'AbortError') {
+                        console.error('Error:', e);
+                        chatBox.innerHTML += `<p>Error: ${e.message}</p>`;
+                    }
+                });
+
+            stopButton.style.display = 'flex';
+        }
+
+        function autoAdjustHeight(element) {
+            element.style.height = 'auto'; // 先设置为 'auto' 让浏览器自动计算高度
+            element.style.height = Math.min(element.scrollHeight, 200) + 'px'; // 最大高度为100px
+        }
+
+        function stopChat() {
+            if (controller) controller.abort();
+            const stopButton = document.getElementById('stop-button');
+            const sendButton = document.querySelector('button[onclick="sendMessage()"]');
+            stopButton.style.display = 'none';
+            sendButton.style.display = 'flex';
+        }
+
+        function startNewChat() {
+            conversationHistory = [{
+                role: "system",
+                content: sysprmpt
+            }];
+            document.getElementById('chat-box').innerHTML = ''; // 清空聊天框
+            document.getElementById('prompt-textarea').innerHTML = ''; // 清空输入框
+        }
+        async function copyCode(codeContent) {
+            try {
+                await navigator.clipboard.writeText(codeContent);
+                const copyButtons = document.querySelectorAll('.copy-code-btn');
+                copyButtons.forEach(button => {
+                    button.textContent = 'Copied';
+                    button.style.backgroundColor = '#616161';
+                    setTimeout(() => {
+                        button.textContent = 'Copy';
+                        button.style.backgroundColor = '#4A4A4A';
+                    }, 1000);
+                });
+            } catch (err) {
+                console.error('Failed to copy: ', err);
+            }
+        }
+    </script>
+</body>
+
+</html>
